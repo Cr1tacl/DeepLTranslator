@@ -1,4 +1,6 @@
-const DEEPL_KEY = "8c195d24-045b-40d8-82a1-6a7f9873063f:fx";
+const DEEPL_KEY = "8c195d24-045b-40d8-82a1-6a7f9873063f:fx"; // fallback if Worker unreachable
+const WORKER_URL = "https://translator-api.your-subdomain.workers.dev"; // ← REPLACE after deploy
+const LICENSE_KEY = ""; // ← User enters their key here, or leave empty for beta
 
 // ── Conjugation cache ──────────────────────────────────────────────────────
 const conjCache = {};
@@ -110,6 +112,24 @@ async function conjugateWithAI(subject, verb, targetLang) {
   return result;
 }
 
+// ── Worker translation (server-side, no limits for licensed users) ──────────
+async function translateViaWorker(text, sourceLang, targetLang) {
+  const res = await fetch(WORKER_URL + "/translate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text,
+      source: sourceLang || "auto",
+      target: targetLang || "ES",
+      provider: "deepl", // use best engine server-side
+      licenseKey: LICENSE_KEY || "",
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Worker error " + res.status);
+  return { text: data.text, provider: data.provider || "worker", lowConfidence: false };
+}
+
 // ── Normal translation engines ─────────────────────────────────────────────
 async function translateDeepL(text, sourceLang, targetLang) {
   const params = { text, target_lang: targetLang };
@@ -212,7 +232,23 @@ async function doTranslate(text, sendResponse) {
       return;
     }
 
-    // 3️⃣ Proceed with API/AI translation
+    // 3️⃣ Try Worker first (server-side, protected, unlimited for licensed)
+    try {
+      const workerResult = await translateViaWorker(text, sourceLang, targetLang);
+      await saveHistory(text, workerResult.text, workerResult.provider, sourceLang, targetLang, !!conj, conj ? conj.enSubject + " " + conj.verb : null);
+      sendResponse({
+        text: workerResult.text, originalText: text, provider: workerResult.provider, mode, sourceLang, targetLang,
+        lowConfidence: workerResult.lowConfidence,
+        isConjugation: false, // Worker handles conjugation server-side if needed
+        conjugationInfo: null,
+        fromLearned: false,
+      });
+      return;
+    } catch(workerErr) {
+      console.warn("Worker unreachable, falling back to direct API:", workerErr.message);
+    }
+
+    // 4️⃣ Fallback: direct API calls (old behavior, for offline / Worker down)
     const conj = conjEnabled ? detectConjugation(text) : null;
     let resultText, lowConfidence = false, usedProvider = provider;
 
@@ -244,7 +280,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({
     provider:"mymemory", mode:"panel", sourceLang:"auto", targetLang:"ES",
     darkMode:false, fontIdx:1, history:[], conjugationEnabled:true, conjCache:{}, learnedDB:{},
-    extensionEnabled: true
+    extensionEnabled: true, workerUrl: WORKER_URL, licenseKey: LICENSE_KEY
   });
   learnedDB = {};
   learnedDBopts = [];
