@@ -414,7 +414,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg.action === "getHistory") {
-    chrome.storage.local.get(["history"], d => sendResponse({ history: d.history || [] }));
+    // Include in-memory batch + persisted history
+    const merged = [...(historyBatch || [])];
+    chrome.storage.local.get(["history"], d => {
+      merged.push(...(d.history || []));
+      // Filter out hijacked/intercepted entries
+      const clean = merged.filter(h => h.provider !== "intercepted");
+      sendResponse({ history: clean });
+    });
     return true;
   }
   if (msg.action === "translateDirect") {
