@@ -244,8 +244,10 @@ async function doTranslate(text, sendResponse) {
     }
 
     // 3️⃣ Try Worker first (server-side, protected, unlimited for licensed)
+    console.log("[Translator] Attempting Worker translate for:", text.slice(0, 30));
     try {
       const workerResult = await translateViaWorker(text, sourceLang, targetLang);
+      console.log("[Translator] Worker result:", JSON.stringify(workerResult).slice(0, 100));
       await saveHistory(text, workerResult.text, workerResult.provider, sourceLang, targetLang, !!conj, conj ? conj.enSubject + " " + conj.verb : null);
       sendResponse({
         text: workerResult.text, originalText: text, provider: workerResult.provider, mode, sourceLang, targetLang,
@@ -256,7 +258,7 @@ async function doTranslate(text, sendResponse) {
       });
       return;
     } catch(workerErr) {
-      console.warn("Worker unreachable, falling back to direct API:", workerErr.message);
+      console.error("[Translator] Worker FAILED, falling back:", workerErr.message);
     }
 
     // 4️⃣ Fallback: direct API calls (old behavior, for offline / Worker down)
