@@ -1,5 +1,5 @@
 const DEEPL_KEY = "8c195d24-045b-40d8-82a1-6a7f9873063f:fx"; // fallback if Worker unreachable
-const WORKER_URL = "https://translator-api.your-subdomain.workers.dev"; // ← REPLACE after deploy
+const WORKER_URL = "https://translator-api.allredtheproxd.workers.dev";
 const LICENSE_KEY = ""; // ← User enters their key here, or leave empty for beta
 
 // ── Conjugation cache ──────────────────────────────────────────────────────
