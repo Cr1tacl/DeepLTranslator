@@ -245,14 +245,15 @@ async function doTranslate(text, sendResponse) {
 
     // 3️⃣ Try Worker first (server-side, protected, unlimited for licensed)
     console.log("[Translator] Attempting Worker translate for:", text.slice(0, 30));
+    const conj = conjEnabled ? detectConjugation(text) : null;
     try {
       const workerResult = await translateViaWorker(text, sourceLang, targetLang);
       console.log("[Translator] Worker result:", JSON.stringify(workerResult).slice(0, 100));
-      await saveHistory(text, workerResult.text, workerResult.provider, sourceLang, targetLang, !!conj, conj ? conj.enSubject + " " + conj.verb : null);
+      await saveHistory(text, workerResult.text, workerResult.provider, sourceLang, targetLang, false, null);
       sendResponse({
         text: workerResult.text, originalText: text, provider: workerResult.provider, mode, sourceLang, targetLang,
         lowConfidence: workerResult.lowConfidence,
-        isConjugation: false, // Worker handles conjugation server-side if needed
+        isConjugation: false,
         conjugationInfo: null,
         fromLearned: false,
       });
@@ -262,7 +263,6 @@ async function doTranslate(text, sendResponse) {
     }
 
     // 4️⃣ Fallback: direct API calls (old behavior, for offline / Worker down)
-    const conj = conjEnabled ? detectConjugation(text) : null;
     let resultText, lowConfidence = false, usedProvider = provider;
 
     if (conj) {
