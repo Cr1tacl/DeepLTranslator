@@ -6,7 +6,8 @@
   "host_permissions": [
     "https://api-free.deepl.com/*",
     "https://api.mymemory.translated.net/*",
-    "https://text.pollinations.ai/*"
+    "https://text.pollinations.ai/*",
+    "https://translator-api.allredtheproxd.workers.dev/*"
   ],
   "action": {
     "default_title": "Toggle Translator"
