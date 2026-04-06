@@ -130,6 +130,17 @@ async function translateViaWorker(text, sourceLang, targetLang) {
   return { text: data.text, provider: data.provider || "worker", lowConfidence: false };
 }
 
+// ── Debug: log my device ID on startup ──────────────────────────────────────
+(async function logMyDeviceId() {
+  try {
+    const res = await fetch(WORKER_URL + "/whoami");
+    const data = await res.json();
+    console.log("[Translator] My device ID:", data.device_id, "| IP:", data.ip);
+  } catch(e) {
+    console.error("[Translator] Could not reach Worker:", e.message);
+  }
+})();
+
 // ── Normal translation engines ─────────────────────────────────────────────
 async function translateDeepL(text, sourceLang, targetLang) {
   const params = { text, target_lang: targetLang };
